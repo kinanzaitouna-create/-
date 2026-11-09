@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تطبيق زيتونة المحاسبي</title>
+    <style>
+        :root {
+            --primary: #2e7d32;
+            --primary-dark: #1b5e20;
+            --surface: #ffffff;
+            --background: #f4f6f8;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #cbd5e1;
+            --danger: #ef4444;
+        }
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 0; }
+        body { background: var(--background); color: var(--text-primary); padding-bottom: 70px; }
+        header { background: var(--primary); color: white; padding: 16px; font-size: 1.25rem; font-weight: bold; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .container { max-width: 600px; margin: auto; padding: 12px; }
+        .card { background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+        .stat-box { background: white; padding: 12px; border-radius: 10px; border-right: 4px solid var(--primary); }
+        .stat-title { font-size: 0.85rem; color: var(--text-secondary); }
+        .stat-value { font-size: 1.2rem; font-weight: bold; margin-top: 4px; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 1rem; }
+        .item-row { display: grid; grid-template-columns: 2fr 1fr 1.2fr auto; gap: 6px; align-items: center; margin-bottom: 8px; }
+        .btn { padding: 10px 14px; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; text-align: center; }
+        .btn-primary { background: var(--primary); color: white; width: 100%; }
+        .btn-outline { background: transparent; border: 1px dashed var(--primary); color: var(--primary); width: 100%; margin-bottom: 12px; }
+        .btn-danger { background: #fee2e2; color: var(--danger); padding: 8px; border-radius: 6px; }
+        .total-box { background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 12px; margin: 12px 0; text-align: center; font-size: 1.1rem; font-weight: bold; }
+        .nav-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; display: flex; border-top: 1px solid var(--border); max-width: 600px; margin: auto; }
+        .nav-item { flex: 1; padding: 12px; text-align: center; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); cursor: pointer; }
+        .nav-item.active { color: var(--primary); border-top: 3px solid var(--primary); }
+        .hidden { display: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        th, td { padding: 8px; text-align: right; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+
+<header>تطبيق زيتونة المحاسبي</header>
+
+<div class="container">
+    <!-- صفحة لوحة التحكم -->
+    <div id="view-dashboard">
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-title">المبيعات</div>
+                <div class="stat-value" id="stat-sales">0.00</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-title">المشتريات</div>
+                <div class="stat-value" id="stat-purchases">0.00</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-title">لنا (ديون الزبائن)</div>
+                <div class="stat-value" id="stat-debtors">0.00</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-title">علينا (ديون الموردين)</div>
+                <div class="stat-value" id="stat-creditors">0.00</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>آخر الفواتير المسجلة</h3>
+            <div id="recent-invoices">لا توجد فواتير بعد.</div>
+        </div>
+    </div>
+
+    <!-- صفحة إضافة فاتورة متعددة -->
+    <div id="view-invoice" class="hidden">
+        <div class="card">
+            <div class="form-group">
+                <label>نوع الفاتورة</label>
+                <select id="inv-type">
+                    <option value="SALE">فاتورة مبيعات</option>
+                    <option value="PURCHASE">فاتورة مشتريات</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>اسم الطرف (العميل / المورد)</label>
+                <input type="text" id="inv-party" placeholder="مثال: شركة النور أو أحمد">
+            </div>
+            <div class="form-group">
+                <label>طريقة الدفع</label>
+                <select id="inv-payment">
+                    <option value="CASH">نقدي</option>
+                    <option value="CREDIT">آجل (دين)</option>
+                </select>
+            </div>
+
+            <label>بنود الفاتورة</label>
+            <div id="items-container"></div>
+            
+            <button class="btn btn-outline" onclick="addItemRow()">+ إضافة مادة / بند جديد</button>
+
+            <div class="form-group">
+                <label>الخصم</label>
+                <input type="number" id="inv-discount" value="0" oninput="calculateTotal()">
+            </div>
+
+            <div class="total-box">
+                الصافي الإجمالي: <span id="inv-grand-total">0.00</span>
+            </div>
+
+            <button class="btn btn-primary" onclick="saveInvoice()">حفظ وترحيل الفاتورة</button>
+        </div>
+    </div>
+
+    <!-- صفحة العملاء والموردين -->
+    <div id="view-parties" class="hidden">
+        <div class="card">
+            <h3>كشف حساب الأطراف (الدائنون والمدينون)</h3>
+            <table id="parties-table">
+                <thead>
+                    <tr>
+                        <th>الطرف</th>
+                        <th>الرصيد الحسابي</th>
+                    </tr>
+                </thead>
+                <tbody id="parties-list"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- شريط التنقل السفلي -->
+<div class="nav-bar">
+    <div class="nav-item active" onclick="showTab('dashboard', this)">الرئيسية</div>
+    <div class="nav-item" onclick="showTab('invoice', this)">فاتورة جديدة</div>
+    <div class="nav-item" onclick="showTab('parties', this)">الحسابات</div>
+</div>
+
+<script>
+    // قاعدة البيانات المحلية في متصفح الهاتف (Local SQLite/Storage)
+    let db = {
+        invoices: JSON.parse(localStorage.getItem('zaytouna_invoices') || '[]'),
+        parties: JSON.parse(localStorage.getItem('zaytouna_parties') || '{}')
+    };
+
+    function persist() {
+        localStorage.setItem('zaytouna_invoices', JSON.stringify(db.invoices));
+        localStorage.setItem('zaytouna_parties', JSON.stringify(db.parties));
+        updateDashboard();
+    }
+
+    function showTab(view, element) {
+        document.getElementById('view-dashboard').classList.add('hidden');
+        document.getElementById('view-invoice').classList.add('hidden');
+        document.getElementById('view-parties').classList.add('hidden');
+        
+        document.getElementById('view-' + view).classList.remove('hidden');
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        element.classList.add('active');
+
+        if(view === 'parties') renderParties();
+    }
+
+    function addItemRow() {
+        const container = document.getElementById('items-container');
+        const div = document.createElement('div');
+        div.className = 'item-row';
+        div.innerHTML = `
+            <input type="text" placeholder="المادة" class="item-name">
+            <input type="number" placeholder="الكمية" value="1" min="1" class="item-qty" oninput="calculateTotal()">
+            <input type="number" placeholder="السعر" value="0" min="0" class="item-price" oninput="calculateTotal()">
+            <button class="btn btn-danger" onclick="this.parentElement.remove(); calculateTotal();">×</button>
+        `;
+        container.appendChild(div);
+        calculateTotal();
+    }
+
+    function calculateTotal() {
+        let total = 0;
+        document.querySelectorAll('.item-row').forEach(row => {
+            const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+            const price = parseFloat(row.querySelector('.item-price').value) || 0;
+            total += qty * price;
+        });
+        const discount = parseFloat(document.getElementById('inv-discount').value) || 0;
+        document.getElementById('inv-grand-total').innerText = Math.max(0, total - discount).toFixed(2);
+    }
+
+    function saveInvoice() {
+        const party = document.getElementById('inv-party').value.trim();
+        const type = document.getElementById('inv-type').value;
+        const payment = document.getElementById('inv-payment').value;
+        const discount = parseFloat(document.getElementById('inv-discount').value) || 0;
+        const total = parseFloat(document.getElementById('inv-grand-total').innerText);
+
+        if (!party) return alert('يرجى إدخال اسم العميل أو المورد');
+        if (total <= 0) return alert('لا يمكن حفظ فاتورة بإجمالي صفر');
+
+        const invoice = {
+            id: Date.now(),
+            party, type, payment, discount, total,
+            date: new Date().toLocaleDateString('ar-EG')
+        };
+
+        // ترحيل الحسابات آلياً (محرك القيد المزدوج)
+        if (!db.parties[party]) db.parties[party] = 0;
+        if (payment === 'CREDIT') {
+            if (type === 'SALE') db.parties[party] += total; // يترتب على العميل دين
+            if (type === 'PURCHASE') db.parties[party] -= total; // يترتب لنا دين للمورد
+        }
+
+        db.invoices.unshift(invoice);
+        persist();
+
+        alert('تم حفظ وترحيل الفاتورة بنجاح!');
+        document.getElementById('items-container').innerHTML = '';
+        document.getElementById('inv-party').value = '';
+        addItemRow();
+        showTab('dashboard', document.querySelectorAll('.nav-item')[0]);
+    }
+
+    function updateDashboard() {
+        let sales = 0, purchases = 0, debtors = 0, creditors = 0;
+        db.invoices.forEach(i => {
+            if (i.type === 'SALE') sales += i.total;
+            if (i.type === 'PURCHASE') purchases += i.total;
+        });
+        for (let p in db.parties) {
+            if (db.parties[p] > 0) debtors += db.parties[p];
+            if (db.parties[p] < 0) creditors += Math.abs(db.parties[p]);
+        }
+        document.getElementById('stat-sales').innerText = sales.toFixed(2);
+        document.getElementById('stat-purchases').innerText = purchases.toFixed(2);
+        document.getElementById('stat-debtors').innerText = debtors.toFixed(2);
+        document.getElementById('stat-creditors').innerText = creditors.toFixed(2);
+
+        const recent = document.getElementById('recent-invoices');
+        if (db.invoices.length === 0) {
+            recent.innerHTML = 'لا توجد فواتير بعد.';
+        } else {
+            recent.innerHTML = db.invoices.slice(0, 5).map(i => `
+                <div style="border-bottom:1px solid #eee; padding:8px 0; display:flex; justify-content:space-between">
+                    <div><b>${i.party}</b> (${i.type === 'SALE' ? 'بيع' : 'شراء'}) - ${i.date}</div>
+                    <div><b>${i.total.toFixed(2)}</b> [${i.payment === 'CASH' ? 'نقدي' : 'آجل'}]</div>
+                </div>
+            `).join('');
+        }
+    }
+
+    function renderParties() {
+        const tbody = document.getElementById('parties-list');
+        tbody.innerHTML = '';
+        for (let p in db.parties) {
+            const bal = db.parties[p];
+            const status = bal > 0 ? `مدين لنا: ${bal.toFixed(2)}` : bal < 0 ? `دائن علينا: ${Math.abs(bal).toFixed(2)}` : 'خالص (0.00)';
+            tbody.innerHTML += `<tr><td>${p}</td><td>${status}</td></tr>`;
+        }
+    }
+
+    // تهيئة التطبيق
+    addItemRow();
+    updateDashboard();
+</script>
+</body>
+</html>
